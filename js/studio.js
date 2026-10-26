@@ -1,0 +1,6 @@
+(function(){'use strict';const modal=document.getElementById('success-modal'),title=document.getElementById('success-title'),detail=document.getElementById('success-detail');let lastFocus=null;
+function show(type,item){lastFocus=document.activeElement;title.textContent=type==='cart'?'Added to cart!':'Design ready!';detail.textContent=type==='cart'?'Your '+(item?.qty||1)+'-piece design has been previewed successfully.':'Your customised garment is ready for the next step.';modal.classList.remove('open');void modal.offsetWidth;modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('modal-open');modal.querySelector('.studio-modal-done').focus();}
+function hide(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.classList.remove('modal-open');lastFocus?.focus?.();}
+modal.querySelectorAll('[data-dismiss-modal]').forEach(el=>el.addEventListener('click',hide));document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.classList.contains('open'))hide();if(event.key==='Tab'&&modal.classList.contains('open')){event.preventDefault();modal.querySelector('.studio-modal-done').focus();}});
+window.OneLineDesigner.mount(document.getElementById('designer-root'),{onBack:()=>{},onAdd:item=>show('cart',item),onBuy:item=>show('buy',item)});
+})();

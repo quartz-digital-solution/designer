@@ -1,0 +1,422 @@
+(function(){
+  "use strict";
+  const S=window.OneLineStore,I=S.icon;
+  const surfaces=[
+    {id:"front",label:"Front",short:"Front"},{id:"back",label:"Back",short:"Back"},
+    {id:"rightSleeve",label:"Right sleeve",short:"R sleeve"},{id:"leftSleeve",label:"Left sleeve",short:"L sleeve"}
+  ];
+  const models=[
+    {name:"Crew T-Shirt",type:"T-Shirt",baseKey:"custom_tshirt_base_price",image:"assets/crew-tee.webp",backImage:"assets/crew-tee-back.webp",leftSleeveImage:"assets/crew-tee-left-sleeve-close.webp",rightSleeveImage:"assets/crew-tee-right-sleeve-close.webp"},
+    {name:"Polo",type:"Polo",baseKey:"custom_polo_base_price",image:"assets/polo-shirt.webp",backImage:"assets/polo-shirt-back.webp",leftSleeveImage:"assets/polo-shirt-left-sleeve-close.webp",rightSleeveImage:"assets/polo-shirt-right-sleeve-close.webp"},
+    {name:"Sports Wear",type:"V-Neck Sportswear",baseKey:"custom_polo_base_price",image:"assets/sports-jersey.webp",backImage:"assets/sports-jersey-back.webp",leftSleeveImage:"assets/sleeve-side-neutral.webp",rightSleeveImage:"assets/sleeve-side-neutral.webp"}
+  ];
+  const materials=[
+    {name:"Budget",extraKey:null,note:"Base cloth · no extra charge"},
+    {name:"Standard",extraKey:"custom_standard_extra",note:"Balanced comfort, finish and durability"},
+    {name:"Premium",extraKey:"custom_premium_extra",note:"Heavier premium feel · cleaner long-lasting finish"}
+  ];
+  const sleeveImage="assets/sleeve-side-neutral.webp";
+  const draftKey="independent-apparel-studio-draft-v1";
+  const fontList=["Anton", "Bebas Neue", "Oswald", "Montserrat", "Poppins", "Playfair Display", "Pacifico", "Lobster", "Permanent Marker", "Orbitron"];
+  const sizeLabels=["XS","S","M","L","XL","XXL","3XL"];
+  const clone=v=>typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v));
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
+  const normalizeTextSize=v=>Math.max(6,Number(v)||30);
+  const uid=(prefix)=>prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+  const resizeMax=()=>{const v=window.visualViewport,w=v?.width||window.innerWidth||390,h=v?.height||window.innerHeight||720;return Math.max(280,Math.round(Math.min(w,h)*.94));};
+
+  function normalizeSizeQty(saved){
+    const out=Object.fromEntries(sizeLabels.map(size=>[size,0]));
+    if(saved?.sizeQty&&typeof saved.sizeQty==='object'){sizeLabels.forEach(size=>{out[size]=Math.max(0,Math.min(999,Math.floor(Number(saved.sizeQty[size])||0)));});}
+    else{const legacySize=sizeLabels.includes(saved?.size)?saved.size:'M',legacyQty=Math.max(1,Math.floor(Number(saved?.qty)||1));out[legacySize]=legacyQty;}
+    if(!Object.values(out).some(Boolean)&&!(saved?.sizeQty&&typeof saved.sizeQty==='object')&&saved?.cartCleared!==true)out.M=1;
+    return out;
+  }
+
+  function makeText(value,index){return{id:uid('text'),type:'text',value:value||'YOUR TEXT',font:'Anton',color:'#ffffff',size:30,rotation:0,position:{x:50+((index||0)%3-1)*7,y:38+((index||0)%4)*5},scale:18,pricingWidthPct:18};}
+  function makeImage(src,index){return{id:uid('image'),type:'image',src:src||'',size:82,rotation:0,position:{x:50+((index||0)%3-1)*7,y:58+((index||0)%4)*4},scale:38,pricingWidthPct:38};}
+  function normalizeLayer(layer,index){
+    if(!layer||!layer.type)return null;
+    if(layer.type==='text')return{id:layer.id||uid('text'),type:'text',value:String(layer.value??layer.text??'YOUR TEXT'),font:layer.font||'Anton',color:layer.color||layer.textColor||'#ffffff',size:normalizeTextSize(layer.size??layer.textSize??30),rotation:Number(layer.rotation??layer.textRotation??0),position:clone(layer.position||layer.positions?.text||{x:50,y:38}),scale:Number(layer.scale??layer.textScale??18),pricingWidthPct:Number(layer.pricingWidthPct??layer.scale??layer.textScale??18),displaySizePct:Number(layer.displaySizePct||0)};
+    if(layer.type==='image')return{id:layer.id||uid('image'),type:'image',src:layer.src||layer.uploadedImage||'',size:Math.max(10,Number(layer.size??layer.imageSize??82)),rotation:Number(layer.rotation??layer.imageRotation??0),position:clone(layer.position||layer.positions?.image||{x:50,y:62}),scale:Number(layer.scale??layer.imageScale??38),pricingWidthPct:Number(layer.pricingWidthPct??layer.scale??layer.imageScale??38),displaySizePct:Number(layer.displaySizePct||0)};
+    return null;
+  }
+  function normalizeSurface(raw,defaultText){
+    if(raw?.layers&&Array.isArray(raw.layers))return{layers:raw.layers.map(normalizeLayer).filter(Boolean)};
+    const layers=[];
+    if(raw?.text)layers.push(normalizeLayer({type:'text',value:raw.text,font:raw.font,color:raw.textColor,size:raw.textSize,rotation:raw.textRotation,position:raw.positions?.text,scale:raw.textScale},0));
+    if(raw?.uploadedImage)layers.push(normalizeLayer({type:'image',src:raw.uploadedImage,size:raw.imageSize,rotation:raw.imageRotation,position:raw.positions?.image,scale:raw.imageScale},1));
+    if(!layers.length&&defaultText)layers.push(makeText(defaultText,0));
+    return{layers};
+  }
+  function normalizeDesigns(saved){
+    const source=saved||{};
+    return Object.fromEntries(surfaces.map(s=>[s.id,normalizeSurface(source[s.id],'')]));
+  }
+  function loadDraft(){
+    try{return JSON.parse(localStorage.getItem(draftKey)||"null");}catch(_){return null;}
+  }
+  function picker(name,value,options,open,extraClass){
+    const selected=options.find(x=>x.value===value)||options[0];
+    return '<div class="custom-picker '+(extraClass||'')+' '+(open===name?'open':'')+'" data-picker="'+name+'"><button type="button" class="picker-trigger" data-action="toggle-picker" data-picker-name="'+name+'"><span>'+S.esc(selected?.label||'Select')+'</span>'+I('chevron')+'</button>'+
+      (open===name?'<div class="picker-menu" role="listbox">'+options.map(x=>'<button type="button" class="'+(x.value===value?'selected':'')+'" data-action="pick" data-picker-name="'+name+'" data-value="'+S.esc(x.value)+'"><span>'+S.esc(x.label)+'</span>'+(x.value===value?I('check'):'')+'</button>').join('')+'</div>':'')+'</div>';
+  }
+
+  function mount(root,hooks){
+    const saved=loadDraft();
+    const pricing=Object.assign({},S.designerPricingDefaults||{},S.getSettings?.()||{});
+    const state={
+      model:models.find(m=>m.name===saved?.modelName||m.type===saved?.modelType)||models[0],
+      material:materials.find(m=>m.name===saved?.materialName)||materials[0],
+      color:saved?.color||"Navy",sizeQty:normalizeSizeQty(saved),selectedSize:sizeLabels.includes(saved?.selectedSize)?saved.selectedSize:(sizeLabels.find(s=>Number(saved?.sizeQty?.[s])>0)||"M"),
+      surface:saved?.surface||"front",designs:normalizeDesigns(saved?.designs||saved?.surfaceDesigns),
+      active:null,pickerOpen:null,fileMode:'add',replaceLayerId:null,printMethods:S.getPrints(),printType:saved?.printType||S.getPrints()[0]?.name||"DTF Print"
+    };
+    const pointers=new Map();let transformGesture=null,resizeTimer=null;const garmentImageCache=new Map();
+    const garmentPaintSerial=new WeakMap();let repaintAnimation=0;
+    let colourPickerH=210,colourPickerS=.55,colourPickerV=.55,colourPickerValue='#1f2c43';
+    const hexToRgb=value=>{let h=String(value||'').replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];};
+    const rgbToHex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+    const hsvToRgb=(h,s,v)=>{h=((h%360)+360)%360;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r=0,g=0,b=0;if(h<60)[r,g,b]=[c,x,0];else if(h<120)[r,g,b]=[x,c,0];else if(h<180)[r,g,b]=[0,c,x];else if(h<240)[r,g,b]=[0,x,c];else if(h<300)[r,g,b]=[x,0,c];else[r,g,b]=[c,0,x];return[(r+m)*255,(g+m)*255,(b+m)*255];};
+    const rgbToHsv=(r,g,b)=>{r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;let h=0;if(d){if(max===r)h=60*(((g-b)/d)%6);else if(max===g)h=60*((b-r)/d+2);else h=60*((r-g)/d+4);}if(h<0)h+=360;return[h,max===0?0:d/max,max];};
+    if(S.isDarkColor(state.color)&&state.printMethods.find(p=>p.name===state.printType)?.lightOnly)state.printType=state.printMethods.find(p=>!p.lightOnly)?.name||"DTF Print";
+    models.flatMap(m=>[m.image,m.backImage,m.leftSleeveImage,m.rightSleeveImage]).concat(sleeveImage).filter(Boolean).forEach(src=>{const im=new Image();im.decoding='async';im.src=src;});
+
+    const current=()=>state.designs[state.surface];
+    const activeLayer=()=>current().layers.find(l=>l.id===state.active)||null;
+    const layerById=id=>current().layers.find(l=>l.id===id)||null;
+    const designedCount=()=>surfaces.filter(x=>state.designs[x.id].layers.length).length;
+    const chosenPrint=()=>state.printMethods.find(x=>x.name===state.printType)||state.printMethods.find(x=>!x.lightOnly)||{name:"DTF Print",note:"Vivid colour"};
+    const n=(key,fallback=0)=>{const value=Number(pricing[key]);return Number.isFinite(value)?value:Number(fallback||0);};
+    const modelBasePrice=()=>n(state.model.baseKey,state.model.type==='Polo'?400:350);
+    const materialExtra=()=>state.material.extraKey?n(state.material.extraKey,state.material.name==='Premium'?100:50):0;
+    const garmentPrice=()=>modelBasePrice()+materialExtra();
+    const presetColours=['Black','White','Navy','Maroon','Olive','Sky','Sand'];
+    const colourValue=value=>S.palette[value]||value||'#1f2c43';
+    const usingCustomColour=()=>!presetColours.includes(state.color);
+    const customColourValue=()=>/^#[0-9a-f]{6}$/i.test(String(state.color||''))?String(state.color):colourValue(state.color);
+    const totalPieces=()=>sizeLabels.reduce((sum,size)=>sum+Math.max(0,Number(state.sizeQty[size]||0)),0);
+    const quantityDiscount=qty=>{qty=Math.max(0,Number(qty||0));const t2=Math.max(1,n('custom_qty_tier2_min',11)),t3=Math.max(t2+1,n('custom_qty_tier3_min',51)),t4=Math.max(t3+1,n('custom_qty_tier4_min',101));if(qty>=t4)return n('custom_qty_101_plus_discount',100);if(qty>=t3)return n('custom_qty_51_100_discount',60);if(qty>=t2)return n('custom_qty_11_50_discount',30);return 0;};
+    const printKey=()=>{const name=String(chosenPrint().name||'').toLowerCase();if(name.includes('embroid'))return'embroidery';if(name.includes('screen'))return'screen';if(name.includes('sublim'))return'sublimation';return'dtf';};
+    const printRate=large=>n('custom_'+printKey()+'_'+(large?'large':'small'),printKey()==='embroidery'?(large?100:50):(large?20:10));
+    const printThreshold=()=>Math.max(1,n('custom_large_print_threshold_pct',20));
+    const printEntries=()=>surfaces.flatMap(surface=>(state.designs[surface.id]?.layers||[]).map(layer=>({surface:surface.id,layer,widthPct:Number(layer.pricingWidthPct??layer.scale??0)})));
+    const printCostPerPiece=()=>printEntries().reduce((sum,entry)=>sum+printRate(entry.widthPct>printThreshold()),0);
+    const unitPrice=()=>Math.max(0,garmentPrice()+printCostPerPiece()-quantityDiscount(totalPieces()));
+    const selectedSizeEntries=()=>sizeLabels.map(size=>[size,Math.max(0,Number(state.sizeQty[size]||0))]).filter(([,qty])=>qty>0);
+    const sizeSummary=()=>selectedSizeEntries().map(([size,qty])=>size+' × '+qty).join(' · ');
+    const garmentSrc=()=>state.surface.includes("Sleeve")?sleeveImage:state.surface==="back"?state.model.backImage:state.model.image;
+    const surfaceLabel=()=>surfaces.find(x=>x.id===state.surface)?.label||"Front";
+    // Render the garment pixels in the selected real fabric colour, not an
+    // additive/multiply overlay (which fails on nearly white base images).
+    function sourcePixels(src){
+      if(!garmentImageCache.has(src))garmentImageCache.set(src,new Promise((resolve,reject)=>{
+        const img=new Image();img.decoding='async';
+        img.onload=()=>{
+          const work=document.createElement('canvas');work.width=img.naturalWidth;work.height=img.naturalHeight;
+          const cx=work.getContext('2d',{willReadFrequently:true});cx.drawImage(img,0,0);
+          resolve({picture:img,pixels:cx.getImageData(0,0,work.width,work.height)});
+        };
+        img.onerror=()=>reject(new Error('Could not load garment photo: '+src));img.src=src;
+      }));
+      return garmentImageCache.get(src);
+    }
+    function recolourPixels(source,colour,ctx){
+      const [red,green,blue]=hexToRgb(colourValue(colour));
+      const original=source.pixels,output=ctx.createImageData(original.width,original.height),a=original.data,b=output.data;
+      const isWhite=red>235&&green>235&&blue>230;
+      for(let i=0;i<a.length;i+=4){
+        const alpha=a[i+3];if(!alpha)continue;
+        if(isWhite){b[i]=a[i];b[i+1]=a[i+1];b[i+2]=a[i+2];b[i+3]=alpha;continue;}
+        const luminance=(a[i]*0.2126+a[i+1]*0.7152+a[i+2]*0.0722)/255;
+        // Preserve original highlights, folds and seam definition.
+        const shade=Math.max(.38,Math.min(1.11,Math.pow(luminance/.94,1.24)));
+        const glint=Math.max(0,luminance-.82)*27;
+        b[i]=Math.max(0,Math.min(255,red*shade+glint));
+        b[i+1]=Math.max(0,Math.min(255,green*shade+glint));
+        b[i+2]=Math.max(0,Math.min(255,blue*shade+glint));
+        b[i+3]=alpha;
+      }
+      ctx.putImageData(output,0,0);
+    }
+    async function drawGarmentColour(canvas,src,colour){
+      if(!canvas)return;
+      const serial=(garmentPaintSerial.get(canvas)||0)+1;garmentPaintSerial.set(canvas,serial);
+      try{
+        const source=await sourcePixels(src);
+        if(garmentPaintSerial.get(canvas)!==serial || (!canvas.isConnected&&canvas.dataset.exportCanvas!=='true'))return;
+        canvas.width=source.pixels.width;canvas.height=source.pixels.height;
+        const ctx=canvas.getContext('2d',{alpha:true});if(!ctx)return;
+        recolourPixels(source,colour,ctx);
+        if(canvas.isConnected){canvas.classList.add('studio-colour-ready');canvas.closest('.compact-garment')?.classList.add('has-live-colour');}
+      }catch(error){console.warn('Garment colour preview unavailable',error);}
+    }
+    function paintCurrentGarment(colour){
+      const canvas=root.querySelector('[data-garment-colour-canvas]');
+      if(canvas)drawGarmentColour(canvas,garmentSrc(),colour);
+    }
+
+    const saveDraft=()=>{try{const entries=selectedSizeEntries();localStorage.setItem(draftKey,JSON.stringify({modelName:state.model.name,modelType:state.model.type,materialName:state.material.name,color:state.color,sizeQty:state.sizeQty,selectedSize:state.selectedSize,size:entries[0]?.[0]||'M',qty:totalPieces(),surface:state.surface,designs:state.designs,printType:state.printType}));}catch(err){console.warn('Designer draft storage is full; current session will continue.',err);}};
+
+    function syncCurrentScale(){
+      const area=root.querySelector('[data-print-area]')?.getBoundingClientRect(),garment=root.querySelector('.compact-garment')?.getBoundingClientRect();if(!area?.width)return;
+      current().layers.forEach(l=>{const el=root.querySelector('[data-layer-id="'+CSS.escape(l.id)+'"]');l.scale=Math.max(.1,l.size/area.width*100);l.displaySizePct=Math.max(.1,l.size/Math.max(1,garment?.width||area.width)*100);if(el){const box=el.getBoundingClientRect();l.pricingWidthPct=Math.max(.1,box.width/Math.max(1,garment?.width||area.width)*100);}});saveDraft();refreshPricingUI();
+    }
+    function handles(layer){return '<button class="layer-remove" data-action="remove-layer" data-layer-id="'+S.esc(layer.id)+'" aria-label="Delete selected item">'+I('close')+'</button><button class="layer-rotate" data-transform="'+S.esc(layer.id)+'" aria-label="Rotate and resize selected item">'+I('rotate')+'</button>';}
+    function layerHtml(layer){
+      const pos=layer.position||{x:50,y:50},selected=state.active===layer.id;
+      if(layer.type==='text')return '<div class="design-layer text-layer '+(selected?'selected':'')+'" data-layer-id="'+S.esc(layer.id)+'" data-layer-type="text" style="left:'+pos.x+'%;top:'+pos.y+'%;color:'+S.esc(layer.color)+';font-family:'+S.esc(layer.font)+';font-size:'+normalizeTextSize(layer.size)+'px;transform:translate(-50%,-50%) rotate('+Number(layer.rotation||0)+'deg)"><span class="layer-text-content">'+S.esc(layer.value)+'</span>'+handles(layer)+'</div>';
+      return '<div class="design-layer image-layer '+(selected?'selected':'')+'" data-layer-id="'+S.esc(layer.id)+'" data-layer-type="image" style="left:'+pos.x+'%;top:'+pos.y+'%;width:'+Math.max(10,Number(layer.size||82))+'px;transform:translate(-50%,-50%) rotate('+Number(layer.rotation||0)+'deg)"><img src="'+S.esc(layer.src)+'" alt="Uploaded artwork" draggable="false">'+handles(layer)+'</div>';
+    }
+    function layerList(){
+      const layers=current().layers;if(!layers.length)return '';
+      let textN=0,imageN=0;
+      return '<div class="layer-stack">'+layers.map(l=>{const n=l.type==='text'?++textN:++imageN;return '<button type="button" data-action="select-layer" data-layer-id="'+S.esc(l.id)+'" class="'+(state.active===l.id?'active':'')+'"><span>'+I(l.type==='text'?'type':'image')+'</span><b>'+(l.type==='text'?'Text ':'Image ')+n+'</b><small>'+(l.type==='text'?S.esc((l.value||'').slice(0,18)):'Artwork')+'</small></button>';}).join('')+'</div>';
+    }
+    function activeControls(maxSize){
+      const l=activeLayer();if(!l)return '';
+      if(l.type==='text'){const rangeMax=Math.max(1200,Math.ceil(Number(l.size||30)*1.25));return '<section class="control-block text-control selected-layer-control"><div class="selected-layer-title"><label>Selected text</label><button data-action="remove-layer" data-layer-id="'+S.esc(l.id)+'">'+I('trash')+' Remove</button></div><div class="input-with-icon">'+I('type')+'<input data-active-text value="'+S.esc(l.value)+'" maxlength="120" placeholder="Add text"></div><div class="inline-fields multi-layer-fields"><div class="font-field"><span>Font style</span><div class="styled-select">'+picker('font',l.font,fontList.map(v=>({value:v,label:v})),state.pickerOpen)+'</div></div><input data-color-input type="color" value="'+S.esc(l.color)+'" aria-label="Text colour"><label class="range-field practical-size-range">Size <small>'+Math.round(l.size)+' px</small><input data-range="size" type="range" min="6" max="'+rangeMax+'" value="'+normalizeTextSize(l.size)+'"></label><label class="range-field full-range">Rotate<input data-range="rotation" type="range" min="-180" max="180" value="'+Number(l.rotation||0)+'"></label></div></section>';}
+      const imageRangeMax=Math.max(1600,Math.ceil(Number(l.size||82)*1.25),maxSize*3);return '<section class="control-block uploaded-control selected-layer-control"><div class="selected-layer-title"><label>Selected image</label><button data-action="remove-layer" data-layer-id="'+S.esc(l.id)+'">'+I('trash')+' Remove</button></div><button class="refined-upload" data-action="replace-image" data-layer-id="'+S.esc(l.id)+'"><img src="'+S.esc(l.src)+'" alt=""><span><b>Replace this image</b><small>PNG, JPG or WEBP</small></span>'+I('upload')+'</button><div class="artwork-tools"><label class="practical-size-range">Size <small>'+Math.round(l.size)+' px</small><input data-range="size" type="range" min="10" max="'+imageRangeMax+'" value="'+Math.max(10,Number(l.size||82))+'"></label><label>Rotate<input data-range="rotation" type="range" min="-180" max="180" value="'+Number(l.rotation||0)+'"></label><button data-action="reset-image">'+I('rotate')+' Reset</button></div></section>';
+    }
+
+    function garmentColourPickerHtml(){
+      return '<div class="fast-colour-overlay garment-colour-overlay" data-garment-picker aria-hidden="true"><div class="fast-colour-sheet" role="dialog" aria-modal="true" aria-label="Choose any colour"><div class="fast-colour-head"><strong>Choose any colour</strong><button type="button" data-garment-picker-close aria-label="Close">×</button></div><div class="fast-sv-wrap"><canvas width="640" height="360" data-garment-sv></canvas><i data-garment-sv-cursor></i></div><input class="fast-hue" data-garment-hue type="range" min="0" max="360" value="210" aria-label="Hue"><div class="fast-picker-bottom"><i data-garment-colour-preview></i><label><span>#</span><input data-garment-hex value="1F2C43" maxlength="6" inputmode="text" aria-label="Hex colour"></label><button type="button" data-garment-picker-apply>Apply</button></div></div></div>';
+    }
+    
+    function setGarmentTintPreview(value){cancelAnimationFrame(repaintAnimation);repaintAnimation=requestAnimationFrame(()=>paintCurrentGarment(value));}
+    function bindGarmentColourPicker(){
+      const overlay=root.querySelector('[data-garment-picker]'),sv=root.querySelector('[data-garment-sv]'),ctx=sv?.getContext('2d'),cursor=root.querySelector('[data-garment-sv-cursor]'),hue=root.querySelector('[data-garment-hue]'),hex=root.querySelector('[data-garment-hex]'),preview=root.querySelector('[data-garment-colour-preview]');if(!overlay||!sv||!ctx)return;
+      const draw=()=>{const w=sv.width,h=sv.height,[r,g,b]=hsvToRgb(colourPickerH,1,1);ctx.fillStyle=rgbToHex(r,g,b);ctx.fillRect(0,0,w,h);let g1=ctx.createLinearGradient(0,0,w,0);g1.addColorStop(0,'#fff');g1.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g1;ctx.fillRect(0,0,w,h);g1=ctx.createLinearGradient(0,0,0,h);g1.addColorStop(0,'rgba(0,0,0,0)');g1.addColorStop(1,'#000');ctx.fillStyle=g1;ctx.fillRect(0,0,w,h);if(cursor){cursor.style.left=(colourPickerS*100)+'%';cursor.style.top=((1-colourPickerV)*100)+'%';}};
+      const setFromHSV=()=>{colourPickerValue=rgbToHex(...hsvToRgb(colourPickerH,colourPickerS,colourPickerV));if(hex)hex.value=colourPickerValue.slice(1).toUpperCase();if(preview)preview.style.background=colourPickerValue;setGarmentTintPreview(colourPickerValue);draw();};
+      const setFromHex=value=>{if(!/^#[0-9a-f]{6}$/i.test(value))return false;colourPickerValue=value.toLowerCase();const[h,s,v]=rgbToHsv(...hexToRgb(value));colourPickerH=h;colourPickerS=s;colourPickerV=v;if(hue)hue.value=Math.round(h);if(hex)hex.value=value.slice(1).toUpperCase();if(preview)preview.style.background=value;setGarmentTintPreview(value);draw();return true;};
+      const close=apply=>{overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');document.documentElement.classList.remove('fast-picker-lock');document.body.classList.remove('fast-picker-lock');if(!apply)setGarmentTintPreview(colourValue(state.color));};
+      root.querySelector('[data-garment-picker-close]')?.addEventListener('click',()=>close(false));overlay.addEventListener('click',e=>{if(e.target===overlay)close(false);});
+      root.querySelector('[data-garment-picker-apply]')?.addEventListener('click',()=>{const value='#'+String(hex?.value||'').trim();if(!setFromHex(value))return;state.color=colourPickerValue;if(S.isDarkColor(state.color)&&chosenPrint().lightOnly)state.printType=state.printMethods.find(p=>!p.lightOnly)?.name||'DTF Print';saveDraft();close(true);render();});
+      hue?.addEventListener('input',e=>{colourPickerH=+e.target.value;setFromHSV();});hex?.addEventListener('input',e=>{const v=e.target.value.replace(/[^0-9a-f]/gi,'').slice(0,6);e.target.value=v.toUpperCase();if(v.length===6)setFromHex('#'+v);});
+      const pick=e=>{const r=sv.getBoundingClientRect(),x=clamp(e.clientX-r.left,0,r.width),y=clamp(e.clientY-r.top,0,r.height);colourPickerS=x/r.width;colourPickerV=1-y/r.height;setFromHSV();};sv.addEventListener('pointerdown',e=>{try{sv.setPointerCapture(e.pointerId);}catch(_){}pick(e);});sv.addEventListener('pointermove',e=>{if(e.buttons)pick(e);});
+      root._openGarmentColourPicker=()=>{setFromHex(customColourValue());overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');document.documentElement.classList.add('fast-picker-lock');document.body.classList.add('fast-picker-lock');};
+    }
+
+    const reportExport=(message)=>{const el=root.querySelector('[data-export-message]');if(el)el.textContent=message;};
+    const loadPicture=src=>new Promise((resolve,reject)=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('Could not load design artwork'));im.src=src;});
+    async function designPNG(){
+      // Draw the real garment and live artwork from this side onto a transparent PNG.
+      syncCurrentScale();
+      const width=1024,canvas=document.createElement('canvas');canvas.width=width;canvas.height=width;
+      const ctx=canvas.getContext('2d',{alpha:true});if(!ctx)throw new Error('This browser cannot export an image');
+      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+      const picture=await loadPicture(garmentSrc()),photo=root.querySelector('.compact-garment .garment-photo'),area=root.querySelector('[data-print-area]');
+      if(!photo||!area)throw new Error('Select the garment side first');
+      // Garment PNGs are square, transparent assets. No background is added.
+      const garmentCanvas=document.createElement('canvas');garmentCanvas.dataset.exportCanvas='true';
+      await drawGarmentColour(garmentCanvas,garmentSrc(),state.color);
+      const exportScale=Math.min(width/picture.naturalWidth,width/picture.naturalHeight);
+      const exportW=picture.naturalWidth*exportScale,exportH=picture.naturalHeight*exportScale;
+      ctx.drawImage(garmentCanvas,(width-exportW)/2,(width-exportH)/2,exportW,exportH);
+      const photoRect=photo.getBoundingClientRect(),areaRect=area.getBoundingClientRect();
+      // The displayed image uses object-fit:contain; account for image padding on tall/wide stages.
+      const fitted=Math.min(photoRect.width/Math.max(1,picture.naturalWidth),photoRect.height/Math.max(1,picture.naturalHeight));
+      const fittedW=picture.naturalWidth*fitted,fittedH=picture.naturalHeight*fitted;
+      const imgLeft=photoRect.left+(photoRect.width-fittedW)/2,imgTop=photoRect.top+(photoRect.height-fittedH)/2;
+      const scale=exportW/Math.max(1,fittedW);
+      for(const layer of current().layers){
+        const el=[...root.querySelectorAll('.design-layer[data-layer-id]')].find(node=>node.dataset.layerId===layer.id);
+        if(!el)continue;
+        const pos=layer.position||{x:50,y:50},x=(areaRect.left+areaRect.width*Number(pos.x||0)/100-imgLeft)*scale+(width-exportW)/2;
+        const y=(areaRect.top+areaRect.height*Number(pos.y||0)/100-imgTop)*scale+(width-exportH)/2;
+        ctx.save();ctx.translate(x,y);ctx.rotate(Number(layer.rotation||0)*Math.PI/180);
+        if(layer.type==='text'){
+          const computed=getComputedStyle(el),fontSize=Math.max(5,parseFloat(computed.fontSize)||Number(layer.size||30));
+          const fontFamily=layer.font||'Anton';
+          if(document.fonts?.load)await document.fonts.load('900 '+Math.round(fontSize*scale)+'px '+JSON.stringify(fontFamily),'Your Text').catch(()=>{});
+          ctx.fillStyle=layer.color||'#fff';ctx.font='900 '+(fontSize*scale)+'px '+JSON.stringify(fontFamily);
+          ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(layer.value||''),0,0);
+        }else if(layer.type==='image'&&layer.src){
+          const art=await loadPicture(layer.src),drawW=Math.max(1,el.offsetWidth*scale),drawH=drawW*art.naturalHeight/Math.max(1,art.naturalWidth);
+          ctx.drawImage(art,-drawW/2,-drawH/2,drawW,drawH);
+        }
+        ctx.restore();
+      }
+      return await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create PNG')), 'image/png'));
+    }
+    function savePNGBlob(blob){
+      const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Apparel-Studio-'+state.model.name.replace(/[^a-z0-9]+/gi,'-')+'-'+state.surface+'.png';
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+    }
+    async function downloadDesigner(){
+      reportExport('Preparing transparent PNG…');
+      try{const blob=await designPNG();savePNGBlob(blob);reportExport('Your customized design PNG is ready.');}
+      catch(err){reportExport(err.message||'Could not export this design.');}
+    }
+    function refreshPricingUI(){
+      const qty=totalPieces(),amount=S.money(unitPrice()*qty),unit=S.money(unitPrice()),discount=quantityDiscount(qty),prints=printEntries(),large=prints.filter(x=>x.widthPct>printThreshold()).length;
+      root.querySelectorAll('[data-size-total]').forEach(el=>el.textContent=qty);
+      const priceEl=root.querySelector('[data-estimated-total]');if(priceEl)priceEl.textContent=amount;
+      const unitEl=root.querySelector('[data-unit-price]');if(unitEl)unitEl.textContent=unit;
+      const breakdown=root.querySelector('.designer-price-breakdown');let discountRow=root.querySelector('[data-qty-discount-row]');
+      if(discount>0){
+        if(!discountRow&&breakdown){discountRow=document.createElement('span');discountRow.setAttribute('data-qty-discount-row','');discountRow.innerHTML='Quantity discount <b data-qty-discount></b>';const printRow=breakdown.querySelector('[data-print-row]');breakdown.insertBefore(discountRow,printRow||null);}
+        const discountEl=discountRow?.querySelector('[data-qty-discount]');if(discountEl)discountEl.textContent='-'+S.money(discount)+' / piece';
+      }else if(discountRow)discountRow.remove();
+      const printEl=root.querySelector('[data-print-charge]');if(printEl)printEl.textContent=S.money(printCostPerPiece())+' / piece · '+prints.length+' print'+(prints.length===1?'':'s')+(large?' · '+large+' large':'');
+      const summaryEl=root.querySelector('[data-piece-summary]');if(summaryEl)summaryEl.textContent=state.model.name+' · '+state.material.name+' · '+prints.length+' print'+(prints.length===1?'':'s')+' · '+qty+' piece'+(qty===1?'':'s')+(sizeSummary()?' · '+sizeSummary():'');
+      
+      root.querySelectorAll('.designer-buy-actions button').forEach(button=>button.disabled=qty<1);
+    }
+
+    function render(){
+      const sleeve=state.surface.includes("Sleeve"),src=garmentSrc(),dark=S.isDarkColor(state.color),maxSize=resizeMax();
+      root.innerHTML='<main class="designer-page compact-designer old-model-designer unlimited-layer-designer v165-designer">'+
+        '<div class="designer-simple-top"><a class="studio-product-label studio-quartz-link" href="https://quartzwebsolutions.com/" target="_blank" rel="noopener noreferrer" aria-label="Visit Quartz Web Solutions"><span class="studio-dot" aria-hidden="true"></span><span class="quartz-link-label">Quartz Web Solutions</span><span class="quartz-link-icon" aria-hidden="true">↗</span></a><div class="designer-model-picker">'+picker('model',state.model.name,models.map(m=>({value:m.name,label:m.name==='Crew T-Shirt'?'T-Shirt':m.name==='Sports Wear'?'Sportswear':m.name})),state.pickerOpen)+'</div></div>'+
+        '<div class="designer-view-tabs"><div class="compact-surface-tabs" aria-label="Garment side">'+surfaces.map(x=>'<button type="button" data-action="surface" data-value="'+x.id+'" class="'+(x.id===state.surface?'active':'')+'"><span class="full-label">'+(x.id==='leftSleeve'?'Left sleeve':x.id==='rightSleeve'?'Right sleeve':x.label)+'</span><span class="short-label">'+x.short+'</span>'+(state.designs[x.id].layers.length?'<i></i>':'')+'</button>').join('')+'</div></div>'+
+        '<div class="designer-layout compact-designer-layout"><section class="designer-stage compact-stage locked-garment-stage" data-stage>'+
+          '<div class="stage-topline"><span>'+surfaceLabel()+'</span></div>'+
+          '<div class="shirt-canvas compact-shirt-canvas view-'+state.surface+'"><div class="live-garment compact-garment garment-'+state.surface+' locked-garment"><div class="garment-depth"></div>'+
+            '<img class="garment-photo '+(sleeve?'sleeve-photo ':'')+(state.surface==='rightSleeve'?'mirror-sleeve':'')+'" src="'+src+'" alt="'+S.esc(state.model.name+' '+surfaceLabel())+'" draggable="false">'+
+            '<canvas data-garment-colour-canvas class="studio-tinted-photo '+(sleeve?'sleeve-tinted-photo ':'')+(state.surface==='rightSleeve'?'mirror-tinted-photo':'')+'" aria-hidden="true"></canvas>'+
+            '<div class="print-area surface-'+state.surface+'" data-print-area>'+current().layers.map(layerHtml).join('')+'</div></div></div></section>'+
+          '<aside class="designer-controls compact-controls">'+
+            '<div class="quick-layer-tools unlimited-add-tools"><button data-action="add-text">'+I('type')+'<span>Add text</span></button><button data-action="choose-image">'+I('image')+'<span>Add image</span></button><input data-file hidden type="file" accept="image/*" multiple></div>'+
+
+            activeControls(maxSize)+
+            '<section class="control-block garment-colour-control"><label>Garment colour</label><div class="swatches garment-colour-swatches">'+presetColours.map(c=>'<button aria-label="'+c+'" title="'+c+'" data-action="color" data-value="'+c+'" class="'+(state.color===c?'active':'')+'" style="background:'+S.palette[c]+'">'+(state.color===c?I('check'):'')+'</button>').join('')+'<button type="button" aria-label="Choose any colour" title="Choose any colour" data-action="custom-color-open" class="custom-colour-swatch '+(usingCustomColour()?'active':'')+'"></button></div><button type="button" class="choose-any-colour-row" data-action="custom-color-open"><span><i style="background:'+customColourValue()+'"></i>Choose any colour</span>'+I('chevron')+'</button></section>'+
+            '<section class="control-block material-quality-control"><label>Cloth type</label><div class="material-quality-cards">'+materials.map(m=>{const extra=m.extraKey?n(m.extraKey,m.name==='Premium'?100:50):0,total=modelBasePrice()+extra;return '<button data-action="material-card" data-value="'+S.esc(m.name)+'" class="'+(m.name===state.material.name?'active':'')+'"><span><b>'+S.esc(m.name)+'</b><strong>'+S.money(total)+'</strong></span><small>'+(extra?'Base + '+S.money(extra):'Same as base price')+' · '+S.esc(m.note)+'</small></button>';}).join('')+'</div></section>'+
+            '<section class="control-block print-control"><label>Printing type</label><div class="print-options">'+state.printMethods.map(p=>{const disabled=!!(p.lightOnly&&dark),name=String(p.name||'').toLowerCase(),key=name.includes('embroid')?'embroidery':name.includes('screen')?'screen':name.includes('sublim')?'sublimation':'dtf',small=n('custom_'+key+'_small',key==='embroidery'?50:10),large=n('custom_'+key+'_large',key==='embroidery'?100:20);return '<button data-action="print" data-value="'+S.esc(p.name)+'" class="'+(state.printType===p.name?'active ':'')+(disabled?'disabled':'')+'" '+(disabled?'disabled aria-disabled="true"':'')+'><span>'+(state.printType===p.name?I('check'):'')+'</span><b>'+S.esc(p.name)+'</b><strong>'+S.money(small)+' small · '+S.money(large)+' large</strong></button>';}).join('')+'</div></section>'+
+            '<section class="control-block custom-size-quantity-control"><div class="size-qty-heading"><label>Size & quantity</label></div><div class="studio-size-row"><label class="studio-size-select-wrap"><span>SIZE</span><select data-single-size aria-label="Select garment size">'+sizeLabels.map(size=>'<option value="'+size+'" '+(state.selectedSize===size?'selected':'')+'>'+size+'</option>').join('')+'</select><i class="size-select-chevron"></i></label><div class="studio-quantity-wrap"><span>QUANTITY</span><div class="studio-qty-stepper"><button type="button" data-action="qty-decrease" aria-label="Decrease quantity">−</button><input data-single-qty type="number" inputmode="numeric" min="1" max="999" value="'+Math.max(1,Number(state.sizeQty[state.selectedSize]||0))+'" aria-label="Quantity"><button type="button" data-action="qty-increase" aria-label="Increase quantity">+</button></div></div></div></section>'+
+            '<div class="designer-price-breakdown"><span>Unit price <b data-unit-price>'+S.money(unitPrice())+'</b></span>'+(quantityDiscount(totalPieces())>0?'<span data-qty-discount-row>Quantity discount <b data-qty-discount>-'+S.money(quantityDiscount(totalPieces()))+' / piece</b></span>':'')+'<span data-print-row>Printing <b data-print-charge>'+S.money(printCostPerPiece())+' / piece</b></span></div><div class="designer-total refined-total"><div><small>Estimated total</small><strong data-estimated-total>'+S.money(unitPrice()*totalPieces())+'</strong><span data-piece-summary>'+state.model.name+' · '+state.material.name+' · '+printEntries().length+' print'+(printEntries().length===1?'':'s')+' · '+totalPieces()+' piece'+(totalPieces()===1?'':'s')+(sizeSummary()?' · '+S.esc(sizeSummary()):'')+'</span></div><div class="qty-static custom-total-pieces"><b data-size-total>'+totalPieces()+'</b><small>pcs</small></div></div>'+
+            '<div class="designer-buy-actions"><button type="button" class="primary refined-add" data-action="add" '+(totalPieces()<1?'disabled':'')+'>Add to Cart '+I('cart')+'</button><button type="button" class="designer-buy-now" data-action="buy-now" '+(totalPieces()<1?'disabled':'')+'>Buy Now '+I('arrow')+'</button></div>'+
+          '</aside></div>'+
+        '<div class="studio-download-row"><span class="designer-export-message" data-export-message role="status" aria-live="polite"></span><button type="button" class="studio-download" data-action="download-designer">'+I('download')+' Download design PNG</button></div>'+
+        '</main>'+garmentColourPickerHtml();
+      bind();bindGarmentColourPicker();paintCurrentGarment(state.color);requestAnimationFrame(syncCurrentScale);
+    }
+
+    function chooseModel(value){const found=models.find(m=>m.name===value);if(found){state.model=found;saveDraft();}}
+    function chooseMaterial(value){const found=materials.find(m=>m.name===value);if(found){state.material=found;saveDraft();}}
+    function removeLayer(id){const idx=current().layers.findIndex(l=>l.id===id);if(idx>=0)current().layers.splice(idx,1);if(state.active===id)state.active=null;saveDraft();render();}
+    function legacySurface(surface){
+      const text=surface.layers.find(l=>l.type==='text'),image=surface.layers.find(l=>l.type==='image');
+      return{text:text?.value||'',font:text?.font||'Anton',textColor:text?.color||'#fff',textSize:text?.size||30,textScale:text?.scale||18,textRotation:text?.rotation||0,uploadedImage:image?.src||'',imageSize:image?.size||82,imageScale:image?.scale||38,imageRotation:image?.rotation||0,positions:{text:clone(text?.position||{x:50,y:38}),image:clone(image?.position||{x:50,y:62})},layers:clone(surface.layers)};
+    }
+    function makeDesign(){
+      syncCurrentScale();const front=legacySurface(state.designs.front),surfaceDesigns=Object.fromEntries(surfaces.map(s=>[s.id,legacySurface(state.designs[s.id])]));
+      return{model:state.model.name,garmentType:state.model.type,materialQuality:state.material.name,materialPrice:modelBasePrice()+materialExtra(),garmentBasePrice:modelBasePrice(),materialExtra:materialExtra(),quantityDiscount:quantityDiscount(totalPieces()),printChargePerPiece:printCostPerPiece(),unitPrice:unitPrice(),largePrintThresholdPct:printThreshold(),garmentImage:state.model.image,garmentBackImage:state.model.backImage,leftSleeveImage:state.model.leftSleeveImage,rightSleeveImage:state.model.rightSleeveImage,sleeveImage:state.model.leftSleeveImage||sleeveImage,garmentColor:state.color,text:front.text,font:front.font,textColor:front.textColor,textSize:front.textSize,textScale:front.textScale,textRotation:front.textRotation,uploadedImage:front.uploadedImage,imageSize:front.imageSize,imageScale:front.imageScale,imageRotation:front.imageRotation,positions:front.positions,printType:state.printType,sizeQuantities:Object.fromEntries(selectedSizeEntries()),totalQty:totalPieces(),surfaceDesigns};
+    }
+    function add(buyNow=false){const qty=totalPieces();if(qty<1){alert('Select at least one piece in the size quantities.');return;}const sizes=Object.fromEntries(selectedSizeEntries()),customDesign=makeDesign();(buyNow?hooks.onBuy:hooks.onAdd)({key:'custom-'+Date.now(),name:state.model.name+' · Custom',price:unitPrice(),qty,color:state.color,size:sizeSummary(),sizeQuantities:sizes,detail:state.material.name+' cloth · '+state.printType+' · '+printEntries().length+' print'+(printEntries().length===1?'':'s')+(quantityDiscount(qty)?' · '+S.money(quantityDiscount(qty))+' bulk discount/pc':'')+(sizeSummary()?' · '+sizeSummary():''),image:state.model.image,custom:true,customDesign});saveDraft();}
+    function compressImage(file){
+      return new Promise((resolve,reject)=>{if(!file||!file.type.startsWith('image/')){reject(new Error('Not an image'));return;}const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const im=new Image();im.onerror=reject;im.onload=()=>{const scale=Math.min(1,1000/Math.max(im.width,im.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(im.width*scale));canvas.height=Math.max(1,Math.round(im.height*scale));const ctx=canvas.getContext('2d',{alpha:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(im,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/webp',.76));};im.src=String(reader.result);};reader.readAsDataURL(file);});
+    }
+    async function uploadFiles(files,replaceId){
+      const list=[...files].filter(f=>f?.type?.startsWith('image/'));if(!list.length)return;
+      try{
+        if(replaceId){const layer=layerById(replaceId);if(layer&&layer.type==='image'){layer.src=await compressImage(list[0]);layer.rotation=0;state.active=layer.id;}}
+        else{for(const file of list){const src=await compressImage(file),layer=makeImage(src,current().layers.length);current().layers.push(layer);state.active=layer.id;}}
+        saveDraft();render();
+      }catch(err){console.error(err);alert('That image could not be added. Please try another image file.');}
+    }
+    function focusTextEditor(id){state.active=id;render();setTimeout(()=>{const input=root.querySelector('[data-active-text]');if(!input)return;input.focus({preventScroll:true});input.select();input.scrollIntoView({behavior:'auto',block:'nearest'});},20);}
+    function editTextOnGarment(id){
+      const layer=layerById(id),el=[...root.querySelectorAll('.design-layer[data-layer-id]')].find(x=>x.dataset.layerId===id);
+      if(!layer||layer.type!=='text'||!el||el.classList.contains('inline-editing'))return;
+      const span=el.querySelector('.layer-text-content');if(!span)return;
+      // Edit the actual garment text. Never insert an overlay, change its font, or re-render it on focus.
+      state.active=id;const originalText=layer.value||'';
+      el.classList.add('inline-editing');span.contentEditable='true';span.setAttribute('role','textbox');
+      span.setAttribute('aria-label','Edit text on garment');span.setAttribute('spellcheck','false');
+      const finish=(cancel=false)=>{
+        if(!el.classList.contains('inline-editing'))return;
+        const value=cancel?originalText:(span.textContent||'').replace(/[\r\n]+/g,' ').slice(0,120);
+        layer.value=value;span.textContent=value;span.contentEditable='false';span.removeAttribute('role');span.removeAttribute('aria-label');span.removeAttribute('spellcheck');
+        el.classList.remove('inline-editing');saveDraft();refreshPricingUI();requestAnimationFrame(syncCurrentScale);
+      };
+      span.addEventListener('pointerdown',e=>e.stopPropagation());
+      span.addEventListener('click',e=>e.stopPropagation());
+      span.addEventListener('dblclick',e=>e.stopPropagation());
+      span.addEventListener('beforeinput',e=>{if(e.inputType==='insertParagraph'||e.inputType==='insertLineBreak')e.preventDefault();});
+      span.addEventListener('paste',e=>{e.preventDefault();const text=(e.clipboardData?.getData('text/plain')||'').replace(/[\r\n]+/g,' ');const selected=window.getSelection();if(!selected?.rangeCount)return;selected.deleteFromDocument();const range=selected.getRangeAt(0);range.insertNode(document.createTextNode(text.slice(0,120)));range.collapse(false);selected.removeAllRanges();selected.addRange(range);span.dispatchEvent(new Event('input',{bubbles:true}));});
+      span.addEventListener('input',()=>{const val=(span.textContent||'').replace(/[\r\n]+/g,' ').slice(0,120);layer.value=val;});
+      span.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();span.blur();}else if(e.key==='Escape'){e.preventDefault();finish(true);span.blur();}});
+      span.addEventListener('blur',()=>finish());
+      span.focus({preventScroll:true});
+      const selection=window.getSelection();if(selection){const range=document.createRange();range.selectNodeContents(span);range.collapse(false);selection.removeAllRanges();selection.addRange(range);}
+    }
+    function applyLayerStyle(layer){
+      const el=root.querySelector('[data-layer-id="'+CSS.escape(layer.id)+'"]');if(!el)return;
+      el.style.left=layer.position.x+'%';el.style.top=layer.position.y+'%';el.style.transform='translate(-50%,-50%) rotate('+Number(layer.rotation||0)+'deg)';
+      if(layer.type==='text'){el.style.fontSize=normalizeTextSize(layer.size)+'px';el.style.fontFamily=layer.font;el.style.color=layer.color;const span=el.querySelector('.layer-text-content');if(span)span.textContent=layer.value;}
+      else el.style.width=Math.max(10,Number(layer.size||82))+'px';
+    }
+    function setSelectedVisual(id){root.querySelectorAll('.design-layer').forEach(el=>el.classList.toggle('selected',el.dataset.layerId===id));root.querySelectorAll('.layer-stack button').forEach(el=>el.classList.toggle('active',el.dataset.layerId===id));}
+    function selectLayer(id){if(!layerById(id))return;state.active=id;setSelectedVisual(id);saveDraft();}
+
+    function bind(){
+      root.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',e=>{
+        const a=el.dataset.action;
+        if(a==='back'){syncCurrentScale();hooks.onBack();}
+        else if(a==='add')add();
+        else if(a==='buy-now')add(true);
+        else if(a==='qty-decrease'||a==='qty-increase'){
+          const q=Math.max(1,Math.min(999,Number(state.sizeQty[state.selectedSize]||1)+(a==='qty-increase'?1:-1)));
+          state.sizeQty=Object.fromEntries(sizeLabels.map(s=>[s,s===state.selectedSize?q:0]));saveDraft();render();
+        }
+        else if(a==='download-designer'){downloadDesigner();}
+        else if(a==='surface'){syncCurrentScale();state.surface=el.dataset.value;state.active=null;state.pickerOpen=null;saveDraft();render();}
+        else if(a==='toggle-picker'){e.stopPropagation();state.pickerOpen=state.pickerOpen===el.dataset.pickerName?null:el.dataset.pickerName;render();}
+        else if(a==='pick'){const n=el.dataset.pickerName,v=el.dataset.value;if(n==='font'&&activeLayer()?.type==='text')activeLayer().font=v;if(n==='model')chooseModel(v);state.pickerOpen=null;saveDraft();render();}
+        else if(a==='model-card'){chooseModel(el.dataset.value);render();}
+        else if(a==='material-card'){chooseMaterial(el.dataset.value);render();}
+        else if(a==='add-text'){const layer=makeText('YOUR TEXT',current().layers.length);current().layers.push(layer);state.active=layer.id;saveDraft();focusTextEditor(layer.id);}
+        else if(a==='choose-image'){state.fileMode='add';state.replaceLayerId=null;root.querySelector('[data-file]')?.click();}
+        else if(a==='replace-image'){state.fileMode='replace';state.replaceLayerId=el.dataset.layerId;root.querySelector('[data-file]')?.click();}
+        else if(a==='select-layer'){state.active=el.dataset.layerId;state.pickerOpen=null;saveDraft();render();}
+        else if(a==='color'){state.color=el.dataset.value;if(S.isDarkColor(state.color)&&chosenPrint().lightOnly)state.printType=state.printMethods.find(p=>!p.lightOnly)?.name||'DTF Print';saveDraft();render();}
+        else if(a==='custom-color-open'){root._openGarmentColourPicker?.();}
+
+        else if(a==='remove-layer'){e.preventDefault();e.stopPropagation();removeLayer(el.dataset.layerId);}
+        else if(a==='print'){if(el.disabled)return;state.printType=el.dataset.value;saveDraft();render();}
+        else if(a==='reset-image'){const l=activeLayer();if(l?.type==='image'){l.rotation=0;saveDraft();render();}}
+      }));
+      const file=root.querySelector('[data-file]');if(file)file.addEventListener('change',()=>{const replace=state.fileMode==='replace'?state.replaceLayerId:null;uploadFiles(file.files||[],replace);file.value='';state.fileMode='add';state.replaceLayerId=null;});
+      const updateQuantitySummary=()=>refreshPricingUI();
+      const sizeSelect=root.querySelector('[data-single-size]');
+      sizeSelect?.addEventListener('change',()=>{state.selectedSize=sizeSelect.value;const qty=Math.max(1,Number(root.querySelector('[data-single-qty]')?.value||1));state.sizeQty=Object.fromEntries(sizeLabels.map(s=>[s,s===state.selectedSize?qty:0]));saveDraft();render();});
+      root.querySelector('[data-single-qty]')?.addEventListener('input',e=>{const value=String(e.target.value||'').replace(/\D/g,'').slice(0,3);state.sizeQty=Object.fromEntries(sizeLabels.map(s=>[s,s===state.selectedSize?Math.max(1,Math.min(999,Number(value)||1)):0]));saveDraft();updateQuantitySummary();});
+      const txt=root.querySelector('[data-active-text]');if(txt)txt.addEventListener('input',()=>{const l=activeLayer();if(!l||l.type!=='text')return;l.value=txt.value;const textEl=root.querySelector('[data-layer-id="'+CSS.escape(l.id)+'"] .layer-text-content');if(textEl)textEl.textContent=l.value;saveDraft();requestAnimationFrame(syncCurrentScale);});
+      const col=root.querySelector('[data-color-input]');if(col)col.addEventListener('input',()=>{const l=activeLayer();if(!l||l.type!=='text')return;l.color=col.value;applyLayerStyle(l);saveDraft();});
+      root.querySelectorAll('[data-range]').forEach(el=>el.addEventListener('input',()=>{const l=activeLayer();if(!l)return;if(el.dataset.range==='size'){const currentMax=Number(el.max||0),nextValue=Number(el.value||0);if(currentMax>0&&nextValue>=currentMax*.97)el.max=String(Math.ceil(currentMax*2));l.size=l.type==='text'?normalizeTextSize(el.value):Math.max(10,Number(el.value));}else if(el.dataset.range==='rotation')l.rotation=Number(el.value);const label=el.closest('label')?.querySelector('small');if(label&&el.dataset.range==='size')label.textContent=Math.round(l.size)+' px';applyLayerStyle(l);saveDraft();requestAnimationFrame(syncCurrentScale);}));
+
+      root.querySelectorAll('.design-layer[data-layer-id]').forEach(el=>{
+        const id=el.dataset.layerId;
+        el.addEventListener('dblclick',e=>{if(e.target.closest('button'))return;e.stopPropagation();editTextOnGarment(id);});
+        let lastTap=0;
+        el.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||e.target.closest('button'))return;const now=Date.now();if(now-lastTap<360){e.preventDefault();editTextOnGarment(id);}lastTap=now;});
+        el.addEventListener('pointerdown',e=>{
+          if(e.target.closest('button'))return;e.preventDefault();e.stopPropagation();const l=layerById(id);if(!l)return;
+          selectLayer(id);try{el.setPointerCapture(e.pointerId);}catch(_){}
+          const area=root.querySelector('[data-print-area]')?.getBoundingClientRect();if(!area)return;const px=area.left+(l.position.x/100)*area.width,py=area.top+(l.position.y/100)*area.height;
+          pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,id,offsetX:e.clientX-px,offsetY:e.clientY-py});
+        });
+        el.addEventListener('pointermove',e=>{
+          const p=pointers.get(e.pointerId);if(!p||p.id!==id)return;e.preventDefault();p.x=e.clientX;p.y=e.clientY;const l=layerById(id),area=root.querySelector('[data-print-area]')?.getBoundingClientRect();if(!l||!area)return;
+          l.position.x=clamp((e.clientX-p.offsetX-area.left)/area.width*100,-30,130);l.position.y=clamp((e.clientY-p.offsetY-area.top)/area.height*100,-30,130);
+          applyLayerStyle(l);
+        });
+        const end=e=>{if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);syncCurrentScale();};
+        el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+      });
+      root.querySelectorAll('[data-transform]').forEach(handle=>{
+        handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const id=handle.dataset.transform,l=layerById(id);if(!l)return;selectLayer(id);const box=handle.parentElement.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;transformGesture={id:e.pointerId,layerId:id,cx,cy,angle:Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI,rotation:l.rotation||0,distance:Math.max(1,Math.hypot(e.clientX-cx,e.clientY-cy)),size:l.size};try{handle.setPointerCapture(e.pointerId);}catch(_){}});
+        handle.addEventListener('pointermove',e=>{const g=transformGesture;if(!g||g.id!==e.pointerId)return;e.preventDefault();e.stopPropagation();const l=layerById(g.layerId);if(!l)return;const angle=Math.atan2(e.clientY-g.cy,e.clientX-g.cx)*180/Math.PI,distance=Math.max(1,Math.hypot(e.clientX-g.cx,e.clientY-g.cy));let rotation=g.rotation+angle-g.angle;if(Math.abs(rotation%45)<3)rotation=Math.round(rotation/45)*45;l.rotation=Math.round(rotation);const size=g.size*(distance/g.distance);l.size=l.type==='text'?normalizeTextSize(size):Math.max(10,size);applyLayerStyle(l);});
+        const finish=e=>{if(!transformGesture||transformGesture.id!==e.pointerId)return;e.preventDefault();e.stopPropagation();transformGesture=null;syncCurrentScale();};handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);
+      });
+      const stage=root.querySelector('[data-stage]');if(stage)stage.addEventListener('pointerdown',e=>{if(!e.target.closest('.design-layer')&&!e.target.closest('.custom-picker')&&state.active){state.active=null;state.pickerOpen=null;render();}});
+    }
+
+    let lastViewportWidth=Math.round(window.visualViewport?.width||window.innerWidth||0);
+    const onResize=()=>{const active=document.activeElement;if(active&&(active.matches?.('input, textarea, select')||active.isContentEditable))return;const nextWidth=Math.round(window.visualViewport?.width||window.innerWidth||0);if(Math.abs(nextWidth-lastViewportWidth)<2)return;lastViewportWidth=nextWidth;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>render(),90);};
+    window.addEventListener('resize',onResize);window.visualViewport?.addEventListener?.('resize',onResize);
+    render();
+    return{destroy(){clearTimeout(resizeTimer);window.removeEventListener('resize',onResize);window.visualViewport?.removeEventListener?.('resize',onResize);syncCurrentScale();root.innerHTML='';}};
+  }
+  window.OneLineDesigner={mount};
+})();
