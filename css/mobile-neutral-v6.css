@@ -1,0 +1,468 @@
+/* Quartz Apparel Studio v6 — neutral surfaces, purposeful magenta highlights,
+   and smaller-screen layout refinement. Loaded after the legacy/v5 styles. */
+:root {
+  --studio-primary: #98134f;
+  --studio-primary-hover: #800f42;
+  --studio-ink: #222630;
+  --studio-mute: #707784;
+  --studio-border: #e5e8ed;
+  --studio-faint: #f7f8fa;
+  --studio-shadow: 0 6px 24px rgba(24, 30, 41, .035);
+}
+#designer-root .v165-designer {
+  color: #252832 !important;
+}
+#designer-root .v165-designer .studio-quartz-link {
+  color: #252832 !important;
+}
+#designer-root .v165-designer .studio-quartz-link:hover,
+#designer-root .v165-designer .compact-surface-tabs button.active {
+  color: var(--studio-primary) !important;
+}
+#designer-root .v165-designer .studio-quartz-link .studio-dot {
+  background: var(--studio-primary) !important;
+  box-shadow: 0 0 0 4px #f8eaf0 !important;
+}
+#designer-root .v165-designer .designer-model-picker .picker-trigger,
+#designer-root .v165-designer .compact-surface-tabs,
+#designer-root .v165-designer .compact-controls .control-block,
+#designer-root .v165-designer .designer-price-breakdown {
+  border-color: var(--studio-border) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+#designer-root .v165-designer .compact-surface-tabs {
+  background: #f4f5f7 !important;
+}
+#designer-root .v165-designer .compact-surface-tabs button {
+  color: #69717e !important;
+}
+#designer-root .v165-designer .compact-surface-tabs button.active {
+  background: #fff !important;
+  box-shadow: 0 1px 7px rgba(15, 22, 35, .08) !important;
+}
+#designer-root .v165-designer .compact-stage {
+  border-color: var(--studio-border) !important;
+  background: radial-gradient(ellipse at 50% 39%,#fff 0%,#fafbfc 60%,#f3f5f7 100%) !important;
+  box-shadow: 0 10px 28px rgba(18, 26, 40, .035) !important;
+}
+#designer-root .v165-designer .compact-stage::before {
+  background: none !important;
+}
+#designer-root .v165-designer .compact-stage .stage-topline span {
+  border-color: var(--studio-border) !important;
+  color: #747b86 !important;
+}
+#designer-root .v165-designer .compact-controls .control-block>label,
+#designer-root .size-qty-heading>label,
+#designer-root .selected-layer-title>label {
+  color: #2b3039 !important;
+}
+/* Keep Add text the one solid-magenta editor action; Add image is secondary. */
+#designer-root .v165-designer .quick-layer-tools button:first-child {
+  background: var(--studio-primary) !important;
+  border-color: var(--studio-primary) !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+#designer-root .v165-designer .quick-layer-tools button:not(:first-child) {
+  background: #f5f6f8 !important;
+  border-color: var(--studio-border) !important;
+  color: #323741 !important;
+}
+#designer-root .v165-designer .quick-layer-tools button:not(:first-child):hover {
+  background: #ebedf0 !important;
+}
+#designer-root .v165-designer .choose-any-colour-row,
+#designer-root .v165-designer .selected-layer-control .picker-trigger,
+#designer-root .v165-designer .selected-layer-control .styled-select,
+#designer-root .v165-designer .selected-layer-control .input-with-icon {
+  background: #f8f9fa !important;
+  border-color: var(--studio-border) !important;
+  color: #4b525e !important;
+}
+#designer-root .v165-designer .choose-any-colour-row:hover {
+  background: #eff1f4 !important;
+}
+#designer-root .v165-designer .compact-controls .swatches button.active {
+  outline-color: var(--studio-primary) !important;
+}
+/* Fabric/cloth type: correct the inherited mobile margin-left:auto on prices.
+   Each choice consistently displays its name centered above its price. */
+#designer-root .v165-designer .material-quality-cards {
+  display: grid !important;
+  grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+  gap: 9px !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 83px !important;
+  padding: 11px 5px !important;
+  text-align: center !important;
+  background: #fff !important;
+  border: 1px solid var(--studio-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button>span {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  text-align: center !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button b,
+#designer-root .v165-designer .compact-controls .material-quality-cards button strong {
+  display: block !important;
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button b {
+  font-size: 12px !important;
+  color: #333943 !important;
+  font-weight: 750 !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button strong {
+  font-size: 13px !important;
+  color: #515965 !important;
+  font-weight: 800 !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button.active {
+  background: #fdf6f9 !important;
+  border: 1.5px solid var(--studio-primary) !important;
+  box-shadow: 0 0 0 1px rgba(152, 19, 79, .03) !important;
+}
+#designer-root .v165-designer .compact-controls .material-quality-cards button.active strong {
+  color: var(--studio-primary) !important;
+}
+/* Selection colour is applied only to the active print option. */
+#designer-root .v165-designer .compact-controls .print-options button {
+  background: #fff !important;
+  border-color: var(--studio-border) !important;
+  color: #414650 !important;
+}
+#designer-root .v165-designer .compact-controls .print-options button.active {
+  background: #fdf6f9 !important;
+  border: 1.5px solid var(--studio-primary) !important;
+}
+#designer-root .v165-designer .compact-controls .print-options button>span {
+  border-color: #c8cdd5 !important;
+}
+#designer-root .v165-designer .compact-controls .print-options button.active>span {
+  border-color: var(--studio-primary) !important;
+  background: var(--studio-primary) !important;
+}
+#designer-root .v165-designer .compact-controls .print-options b {
+  color: #3b424d !important;
+}
+#designer-root .v165-designer .studio-size-select-wrap select,
+#designer-root .v165-designer .studio-qty-stepper {
+  border-color: var(--studio-border) !important;
+  background: #f7f8fa !important;
+  color: #2d333d !important;
+}
+#designer-root .v165-designer .studio-size-select-wrap>span,
+#designer-root .v165-designer .studio-quantity-wrap>span {
+  color: #838994 !important;
+}
+#designer-root .v165-designer .studio-qty-stepper button {
+  color: #333943 !important;
+}
+#designer-root .v165-designer .studio-qty-stepper button:hover {
+  background: #e9ebef !important;
+}
+#designer-root .v165-designer .designer-price-breakdown>span {
+  border-color: #e9ebef !important;
+  background: #f8f9fb !important;
+  color: #747c88 !important;
+}
+#designer-root .v165-designer .designer-price-breakdown b {
+  color: #303641 !important;
+}
+#designer-root .v165-designer .refined-total {
+  background: #f6f7f9 !important;
+  background-image: none !important;
+  border-color: var(--studio-border) !important;
+}
+#designer-root .v165-designer .designer-total small,
+#designer-root .v165-designer .designer-total [data-piece-summary] {
+  color: #787f8b !important;
+}
+/* The total amount is a deliberate magenta highlight; PCS is unboxed text. */
+#designer-root .v165-designer .compact-controls .designer-total strong {
+  color: var(--studio-primary) !important;
+}
+#designer-root .v165-designer .designer-total .qty-static.custom-total-pieces b {
+  color: #363d48 !important;
+}
+#designer-root .v165-designer .designer-total .qty-static.custom-total-pieces small {
+  color: #858c98 !important;
+}
+#designer-root .v165-designer .designer-buy-actions .designer-buy-now {
+  background: #272c35 !important;
+  border-color: #272c35 !important;
+}
+#designer-root .v165-designer .designer-buy-actions .designer-buy-now:hover {
+  background: #3c4551 !important;
+  border-color: #3c4551 !important;
+}
+#designer-root .v165-designer .studio-download {
+  background: #fff !important;
+  color: #4d5663 !important;
+  border-color: var(--studio-border) !important;
+}
+#designer-root .v165-designer .studio-download:hover {
+  background: #f6f7f9 !important;
+}
+.quartz-watermark { color: #858c96 !important; }
+.quartz-watermark:hover { background: #f7f8fa !important; color: #98134f !important; border-color: #e6e8ec !important; }
+/* Tablet and phone design */
+@media (max-width:820px) {
+  #designer-root .v165-designer .compact-stage {
+    position:relative !important;
+    top:auto !important;
+    max-height:none !important;
+  }
+  #designer-root .v165-designer .compact-controls .control-block {
+    padding: 17px !important;
+  }
+  #designer-root .v165-designer .compact-controls {
+    gap: 11px !important;
+  }
+}
+@media (max-width:600px) {
+  #designer-root .v165-designer { padding-top: 12px !important; }
+  #designer-root .v165-designer .designer-simple-top,
+  #designer-root .v165-designer .designer-view-tabs,
+  #designer-root .v165-designer .compact-designer-layout,
+  #designer-root .studio-download-row {
+    width: calc(100% - 24px) !important;
+  }
+  #designer-root .v165-designer .designer-simple-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 44px !important;
+    height: auto !important;
+    margin-bottom: 12px !important;
+    gap: 8px !important;
+  }
+  #designer-root .v165-designer .studio-quartz-link {
+    flex: 1 1 0 !important;
+    gap: 7px !important;
+    font-size: 12px !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+  }
+  #designer-root .v165-designer .studio-quartz-link .studio-dot {
+    width: 8px !important;
+    height: 8px !important;
+    flex-basis: 8px !important;
+  }
+  #designer-root .v165-designer .designer-model-picker {
+    flex: 0 0 auto !important;
+    width: min(42vw,166px) !important;
+    min-width: 119px !important;
+    max-width: 166px !important;
+  }
+  #designer-root .v165-designer .designer-model-picker .picker-trigger {
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 10px !important;
+  }
+  #designer-root .v165-designer .designer-model-picker .picker-trigger span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #designer-root .v165-designer .compact-surface-tabs {
+    min-height: 50px !important;
+  }
+  #designer-root .v165-designer .compact-surface-tabs button {
+    min-width: 0 !important;
+    line-height: 1.15 !important;
+    padding: 0 3px !important;
+  }
+  #designer-root .v165-designer .compact-designer-layout {
+    gap: 11px !important;
+  }
+  #designer-root .v165-designer .compact-stage {
+    height: clamp(320px,105vw,480px) !important;
+    min-height: 320px !important;
+  }
+  #designer-root .v165-designer .compact-controls .control-block {
+    padding: 15px !important;
+    border-radius: 15px !important;
+  }
+  #designer-root .v165-designer .quick-layer-tools {
+    gap: 9px !important;
+  }
+  #designer-root .v165-designer .quick-layer-tools button {
+    min-height: 51px !important;
+    height: 51px !important;
+  }
+  #designer-root .v165-designer .material-quality-cards {
+    gap: 8px !important;
+  }
+  #designer-root .v165-designer .compact-controls .material-quality-cards button {
+    min-height: 77px !important;
+    padding: 9px 4px !important;
+  }
+  #designer-root .v165-designer .compact-controls .material-quality-cards button strong {
+    font-size: 13px !important;
+  }
+  #designer-root .v165-designer .compact-controls .print-options button {
+    min-height: 50px !important;
+  }
+  #designer-root .v165-designer .studio-size-row {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 10px !important;
+  }
+  #designer-root .v165-designer .studio-qty-stepper button {
+    width: 38px !important;
+    flex: 0 0 38px !important;
+  }
+  /* Readable label/value rows instead of multiple pink price mini-cards. */
+  #designer-root .v165-designer .designer-price-breakdown {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) !important;
+    padding: 3px 15px !important;
+    gap: 0 !important;
+  }
+  #designer-root .v165-designer .designer-price-breakdown>span {
+    display: flex !important;
+    flex: initial !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-height: 41px !important;
+    padding: 9px 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: 12px !important;
+  }
+  #designer-root .v165-designer .designer-price-breakdown>span + span {
+    border-top: 1px solid #e9ebef !important;
+  }
+  #designer-root .v165-designer .designer-price-breakdown b {
+    font-size: 12px !important;
+  }
+  #designer-root .v165-designer .refined-total {
+    padding: 16px !important;
+  }
+  #designer-root .v165-designer .designer-buy-actions {
+    gap: 9px !important;
+  }
+  #designer-root .v165-designer .designer-buy-actions button {
+    height: 52px !important;
+    min-height: 52px !important;
+  }
+  #designer-root .studio-download-row {
+    margin-top: 13px !important;
+  }
+}
+@media (max-width:360px) {
+  #designer-root .v165-designer .designer-simple-top,
+  #designer-root .v165-designer .designer-view-tabs,
+  #designer-root .v165-designer .compact-designer-layout,
+  #designer-root .studio-download-row {
+    width: calc(100% - 18px) !important;
+  }
+  #designer-root .v165-designer .studio-quartz-link {
+    font-size: 11px !important;
+    gap: 6px !important;
+  }
+  #designer-root .v165-designer .designer-model-picker {
+    width: 119px !important;
+    min-width: 119px !important;
+    max-width: 119px !important;
+  }
+  #designer-root .v165-designer .designer-model-picker .picker-trigger {
+    font-size: 11px !important;
+  }
+  #designer-root .v165-designer .compact-controls .control-block {
+    padding: 12px !important;
+  }
+  #designer-root .v165-designer .material-quality-cards {
+    gap: 6px !important;
+  }
+  #designer-root .v165-designer .compact-controls .material-quality-cards button {
+    min-height: 74px !important;
+    padding: 8px 2px !important;
+    border-radius: 10px !important;
+  }
+  #designer-root .v165-designer .compact-controls .material-quality-cards button b {
+    font-size: 11px !important;
+  }
+  #designer-root .v165-designer .compact-controls .material-quality-cards button strong {
+    font-size: 12px !important;
+  }
+  #designer-root .v165-designer .studio-size-row {
+    gap: 8px !important;
+  }
+  #designer-root .v165-designer .studio-qty-stepper button {
+    width: 32px !important;
+    flex: 0 0 32px !important;
+  }
+  #designer-root .v165-designer .studio-qty-stepper input {
+    width: 35px !important;
+  }
+  #designer-root .v165-designer .designer-total [data-piece-summary] {
+    font-size: 10px !important;
+  }
+  #designer-root .v165-designer .designer-buy-actions button {
+    font-size: 11px !important;
+    padding: 5px !important;
+  }
+}
+/* Keep every preset colour and the custom picker on one neat row on phones. */
+@media (max-width:380px) {
+  #designer-root .v165-designer .garment-colour-swatches {
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+  }
+  #designer-root .v165-designer .garment-colour-swatches button {
+    flex: 0 0 30px !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+}
+@media (max-width:350px) {
+  #designer-root .v165-designer .garment-colour-swatches {
+    gap: 6px !important;
+  }
+  #designer-root .v165-designer .garment-colour-swatches button {
+    flex: 0 0 28px !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+  }
+}
+@media (max-width:350px) {
+  #designer-root .v165-designer .designer-total [data-piece-summary] {
+    font-size: 9.5px !important;
+    line-height: 1.5 !important;
+    letter-spacing: -.015em !important;
+    text-wrap: pretty;
+  }
+}
